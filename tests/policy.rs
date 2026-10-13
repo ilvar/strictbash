@@ -94,6 +94,34 @@ fn checked_conditions_assignments_and_pipelines_are_accepted() {
 }
 
 #[test]
+fn elif_conditions_are_handled_but_earlier_commands_and_bodies_are_not() {
+    for body in [
+        "if false; then :; elif date; then :; fi",
+        "if false; then :; elif [[ -f file ]]; then :; fi",
+        "if false; then :; elif date | cat; then :; fi",
+        "if false; then :; elif out=$(date); then printf '%s' \"${out}\"; fi",
+        "if false; then :; elif false; then :; elif date; then :; else :; fi",
+        "if false; then :; elif date\n# comment before then\nthen :; fi",
+    ] {
+        assert!(codes(body).is_empty(), "{body}: {:?}", codes(body));
+    }
+    for (body, offending_command) in [
+        ("if false; then :; elif date; true; then :; fi", "date"),
+        ("if false; then :; elif true; then date; fi", "date"),
+        ("if false; then :; elif true; then :; else date; fi", "date"),
+    ] {
+        let source = format!("{HEADER}{body}\n");
+        let diagnostics = lint_source("test.sh", &source).unwrap();
+        assert_eq!(diagnostics.len(), 1, "{body}: {diagnostics:?}");
+        let item = diagnostics.first().unwrap();
+        assert_eq!(item.code, "strictbash::explicit_status");
+        assert_eq!(item.at.line, 3);
+        assert_eq!(item.at.col, body.find(offending_command).unwrap() + 1);
+        assert_eq!(item.at.end_col, item.at.col + offending_command.len());
+    }
+}
+
+#[test]
 fn inert_text_is_not_code_but_expanding_heredoc_substitutions_are() {
     assert!(codes("# eval date &\nprintf '%s' 'eval `date` <(date) & $*'\ncat <<'EOF' || exit 1\neval date &\nEOF").is_empty());
     assert!(codes("cat <<EOF || exit 1\n$(eval date)\nEOF")

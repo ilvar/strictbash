@@ -41,7 +41,7 @@ fi
 
 Prefer explicit status handling over `set -e`, whose behavior depends on calling
 context. Fallible commands, tests, pipelines and substitution assignments need
-`if`, `while`/`until`, or an explicit handler such as `|| exit 1`.
+`if`/`elif`, `while`/`until`, or an explicit handler such as `|| exit 1`.
 
 | Stable code | Policy |
 | --- | --- |

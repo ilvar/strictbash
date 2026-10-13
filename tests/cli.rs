@@ -32,6 +32,29 @@ fn real_shellcheck_clean_report_and_exit_status() {
 }
 
 #[test]
+fn elif_conditions_are_clean_in_full_checker() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("elif.sh");
+    fs::write(
+        &file,
+        "#!/usr/bin/env bash\nset -u -o pipefail\nif [[ -f first ]]; then\n    :\nelif grep -q 'needle' file; then\n    :\nelif value=$(printf 'ready'); then\n    printf '%s' \"${value}\"\nfi\n",
+    )
+    .unwrap();
+    let output = cli(&["check", file.to_str().unwrap()]);
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let value: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(value["ok"], true);
+    assert_eq!(value["diagnostics"], serde_json::json!([]));
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
 fn collects_multiple_policy_and_shellcheck_errors_without_execution() {
     let dir = tempdir().unwrap();
     let marker = dir.path().join("should-not-exist");

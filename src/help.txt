@@ -62,9 +62,9 @@ Status handling:
   fi
   tool "${arg}" || exit 1
 
-Use if/while/until or an explicit || handler. In &&/|| chains each non-final
+Use if/elif/while/until or an explicit || handler. In &&/|| chains each non-final
 operand consumes a status; the final operand still needs a handler or must be
-one of the exempt builtins. Only the final command of an if/loop condition is
+one of the exempt builtins. Only the final command of an if/elif/loop condition is
 tested. Groups/functions do not magically guard the commands inside them.
 Pipelines must be guarded as a whole; pipefail exposes upstream failures.
 Command substitutions propagate status only through standalone assignments;

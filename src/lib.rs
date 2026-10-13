@@ -311,7 +311,18 @@ fn guarded_from(mut node: Node<'_>, consider_internal: bool) -> bool {
                 }
                 node = parent;
             }
-            "if_statement" | "elif_clause" | "while_statement" => {
+            "elif_clause" => {
+                // tree-sitter-bash does not label elif conditions with a field.
+                // Only the last statement before the `then` token is tested.
+                let mut cursor = parent.walk();
+                return parent
+                    .children(&mut cursor)
+                    .take_while(|child| child.kind() != "then")
+                    .filter(|child| child.is_named() && child.kind() != "comment")
+                    .last()
+                    .is_some_and(|last| last.id() == node.id());
+            }
+            "if_statement" | "while_statement" => {
                 let mut cursor = parent.walk();
                 return parent
                     .children_by_field_name("condition", &mut cursor)
