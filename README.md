@@ -10,6 +10,26 @@ with strictrs. Uses tree-sitter-bash to distinguish code from inert text.
 
 ## Install and use
 
+Install the latest release into `~/.local/bin`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ilvar/strictbash/main/install.sh -o /tmp/strictbash-install.sh
+bash /tmp/strictbash-install.sh
+```
+
+The installer selects a static Linux x64 or ARM64 binary and checks its SHA-256
+before installing. Other architectures and Unix platforms build the **same
+latest release tag** with Cargo. Source builds require rustup and a native C
+compiler; the script installs the pinned Rust 1.97.1 toolchain via rustup.
+ShellCheck remains required on PATH for linting.
+
+Set `STRICTBASH_INSTALL_DIR=/your/bin` to change the destination, or
+`STRICTBASH_BUILD_FROM_SOURCE=1` to force a source build. Download/checksum
+failures stop installation and preserve the existing binary; they do not
+silently trigger a source build. A published release must exist first.
+
+To install from the current development branch instead:
+
 Requires Rust 1.97.1 to build, ShellCheck on PATH (0.10.0 recommended), and Bash
 4.4+ for generated scripts. ShellCheck 0.9.0 is also supported.
 
@@ -104,6 +124,17 @@ CI installs strictrs from a pinned commit and runs the same gate. Dependencies
 are exact-pinned and Cargo.lock is committed. Property tests exercise inert-text
 handling and determinism; integration tests cover discovery, real ShellCheck,
 CLI failures, multiple diagnostics and generated-project execution.
+
+CI also builds and smoke-tests native static Linux binaries for
+`x86_64-unknown-linux-musl` and `aarch64-unknown-linux-musl` on x64 and ARM64
+runners. Every successful run uploads both binaries with individual `.sha256`
+files. After the checks and both builds pass on `main`, CI creates a GitHub
+release tagged `v<manifest version>`. Existing releases are left unchanged;
+bump the package version and Cargo.lock to publish a new release. Manual
+workflow dispatch can retry publication. Pull requests never publish releases.
+
+Installer tests use isolated command stubs to cover both architectures, exact
+release-tag source fallback, checksums, failures, cleanup and custom paths.
 
 This release implements the checker, policy and project generator. Conservative
 fixes and portable agent-skill installation are future work.

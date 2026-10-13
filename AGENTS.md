@@ -21,9 +21,17 @@ cargo clippy --all-targets --all-features --locked -- -D warnings
 cargo test --all-targets --all-features --locked
 strictrs check .
 cargo run --locked -- check templates
+cargo run --locked -- check install.sh
 ```
 
 Rust is pinned to 1.97.1. Runtime dependencies are exact-pinned; commit Cargo.lock.
 strictrs CI uses revision cf1142b2c73909a3ba2258f32f69a6a72a82cb1c.
 Changes must pass local validation before publishing. Do not use CI to discover
 known local failures. Keep changes coherent and inspect the staged diff.
+
+The installer must pass strictbash and ShellCheck without suppression. Keep its
+Rust toolchain pin synchronized with rust-toolchain.toml. Preserve exact-tag
+source fallback, checksum failure behavior and cleanup regression tests.
+CI publishes static native Linux x64/ARM64 builds only after every gate passes.
+Bump Cargo.toml and Cargo.lock together for a new release; published releases
+must never be overwritten.

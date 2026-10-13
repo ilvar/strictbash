@@ -1,6 +1,17 @@
 strictbash — a constrained Bash profile and diagnostic oracle for coding agents
 
 Install:
+  curl -fsSL https://raw.githubusercontent.com/ilvar/strictbash/main/install.sh -o /tmp/strictbash-install.sh
+  bash /tmp/strictbash-install.sh
+  Installs the latest release to ~/.local/bin. Linux x64/ARM64 use static MUSL
+  binaries with SHA-256 verification. Other Unix hosts/architectures build the
+  same release tag; rustup and a native C compiler are required. The script
+  installs Rust 1.97.1 through rustup for source builds. A release must exist.
+  STRICTBASH_INSTALL_DIR changes the destination; STRICTBASH_BUILD_FROM_SOURCE=1
+  forces a build. Download/checksum failures never silently switch to a build.
+  ShellCheck is required separately on PATH for linting.
+
+Install from the development branch instead:
   cargo install --git https://github.com/ilvar/strictbash --locked
   Install ShellCheck 0.10.0 (recommended) and put shellcheck on PATH.
 
@@ -92,4 +103,9 @@ Development (Rust 1.97.1, pinned dependencies and committed Cargo.lock):
   cargo test --all-targets --all-features --locked
   strictrs check .
   cargo run --locked -- check templates
+  cargo run --locked -- check install.sh
 Tests require ShellCheck on PATH. Preserve minimized property-test regressions.
+CI builds native static Linux x64 and ARM64 binaries, with checksums. Passing
+main builds publish v<manifest version> only when that release does not exist.
+Update Cargo.toml and Cargo.lock together for a new release; never overwrite a
+published version. Pull requests upload artifacts but never publish releases.
