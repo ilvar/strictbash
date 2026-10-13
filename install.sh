@@ -11,8 +11,18 @@ target_for_host() {
     case "${1}:${2}" in
         Linux:x86_64|Linux:amd64) printf 'x86_64-unknown-linux-musl' ;;
         Linux:aarch64|Linux:arm64) printf 'aarch64-unknown-linux-musl' ;;
+        Darwin:x86_64|Darwin:amd64) printf 'x86_64-apple-darwin' ;;
+        Darwin:aarch64|Darwin:arm64) printf 'aarch64-apple-darwin' ;;
         *) printf '' ;;
     esac
+}
+
+verify_checksum() {
+    if sha256sum --version >/dev/null 2>&1; then
+        sha256sum --check --strict "${1}" || return 1
+    else
+        shasum -a 256 --check "${1}" || return 1
+    fi
 }
 
 install_release() {
@@ -50,7 +60,7 @@ install_release() {
             --proto '=https' --proto-redir '=https' --output "${workdir}/${asset}.sha256" \
             "${base_url}/${asset}.sha256" || return 1
         # The checksum's filename is relative to the isolated download directory.
-        if (cd "${workdir}" && sha256sum --check --strict "${asset}.sha256" || exit 1); then
+        if (cd "${workdir}" && verify_checksum "${asset}.sha256" || exit 1); then
             binary="${workdir}/${asset}"
         else
             error 'checksum verification failed; refusing to install' || return 1

@@ -17,7 +17,7 @@ curl -fsSL https://raw.githubusercontent.com/ilvar/strictbash/main/install.sh -o
 bash /tmp/strictbash-install.sh
 ```
 
-The installer selects a static Linux x64 or ARM64 binary and checks its SHA-256
+The installer selects a Linux or macOS x64/ARM64 binary and checks its SHA-256
 before installing. Other architectures and Unix platforms build the **same
 latest release tag** with Cargo. Source builds require rustup and a native C
 compiler; the script installs the pinned Rust 1.97.1 toolchain via rustup.
@@ -135,8 +135,8 @@ handling and determinism; integration tests cover discovery, real ShellCheck,
 CLI failures, multiple diagnostics and generated-project execution.
 
 CI also builds and smoke-tests native static Linux binaries for
-`x86_64-unknown-linux-musl` and `aarch64-unknown-linux-musl` on x64 and ARM64
-runners. Every successful run uploads both binaries with individual `.sha256`
+`x86_64-unknown-linux-musl` and `aarch64-unknown-linux-musl`, plus macOS
+`x86_64-apple-darwin` and `aarch64-apple-darwin`, on native runners. Every successful run uploads both binaries with individual `.sha256`
 files. After the checks and both builds pass on `main`, CI creates a GitHub
 release tagged `v<manifest version>`. Existing releases are left unchanged;
 bump the package version and Cargo.lock to publish a new release. Manual

@@ -156,25 +156,33 @@ printf '%s\n' "$@" >>"$RUSTUP_LOG"
 
 #[test]
 fn downloads_latest_matching_binary_and_checksum_for_supported_architectures() {
-    for (arch, target) in [
-        ("x86_64", "x86_64"),
-        ("amd64", "x86_64"),
-        ("aarch64", "aarch64"),
-        ("arm64", "aarch64"),
+    for (os, arch, target) in [
+        ("Linux", "x86_64", "x86_64-unknown-linux-musl"),
+        ("Linux", "amd64", "x86_64-unknown-linux-musl"),
+        ("Linux", "aarch64", "aarch64-unknown-linux-musl"),
+        ("Linux", "arm64", "aarch64-unknown-linux-musl"),
+        ("Darwin", "x86_64", "x86_64-apple-darwin"),
+        ("Darwin", "arm64", "aarch64-apple-darwin"),
     ] {
         let fixture = Fixture::new();
-        fixture.assert_installed(&fixture.run("Linux", arch, &[]));
+        fixture.assert_installed(&fixture.run(os, arch, &[]));
         let log = fs::read_to_string(&fixture.curl_log).unwrap();
         assert!(log.contains("/releases/latest"));
+        assert!(log.contains(&format!("/releases/download/v9.8.7/strictbash-{target}\n")));
         assert!(log.contains(&format!(
-            "/releases/download/v9.8.7/strictbash-{target}-unknown-linux-musl\n"
-        )));
-        assert!(log.contains(&format!(
-            "/releases/download/v9.8.7/strictbash-{target}-unknown-linux-musl.sha256\n"
+            "/releases/download/v9.8.7/strictbash-{target}.sha256\n"
         )));
         assert!(!fixture.cargo_log.exists());
         assert!(!fixture.rustup_log.exists());
     }
+}
+
+#[test]
+fn macos_checksum_verification_works_without_gnu_sha256sum() {
+    let fixture = Fixture::new();
+    executable(&fixture.bin.join("sha256sum"), "#!/bin/bash\nexit 127\n");
+    fixture.assert_installed(&fixture.run("Darwin", "arm64", &[]));
+    assert!(!fixture.cargo_log.exists());
 }
 
 #[test]
@@ -264,7 +272,7 @@ fn exotic_architectures_and_other_unix_hosts_build_the_exact_latest_tag() {
     for (os, arch) in [
         ("Linux", "riscv64"),
         ("Linux", "armv7l"),
-        ("Darwin", "arm64"),
+        ("FreeBSD", "amd64"),
     ] {
         let fixture = Fixture::new();
         fixture.assert_installed(&fixture.run(os, arch, &[]));

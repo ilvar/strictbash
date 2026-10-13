@@ -32,6 +32,7 @@ known local failures. Keep changes coherent and inspect the staged diff.
 The installer must pass strictbash and ShellCheck without suppression. Keep its
 Rust toolchain pin synchronized with rust-toolchain.toml. Preserve exact-tag
 source fallback, checksum failure behavior and cleanup regression tests.
-CI publishes static native Linux x64/ARM64 builds only after every gate passes.
+CI publishes native Linux/macOS x64/ARM64 builds only after every gate passes;
+Linux binaries are static MUSL builds. Keep macOS checksum verification portable.
 Bump Cargo.toml and Cargo.lock together for a new release; published releases
 must never be overwritten.
