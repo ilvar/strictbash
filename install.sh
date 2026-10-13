@@ -16,7 +16,7 @@ target_for_host() {
 }
 
 install_release() {
-    local workdir install_dir os arch target latest_url tag binary asset base_url
+    local workdir install_dir os arch target version latest_url tag binary asset base_url
     workdir="${1}"
     if [[ -z "${STRICTBASH_INSTALL_DIR:-}" && -z "${HOME:-}" ]]; then
         error 'set HOME or STRICTBASH_INSTALL_DIR to choose a destination' || return 1
@@ -26,12 +26,17 @@ install_release() {
     os=$(uname -s) || return 1
     arch=$(uname -m) || return 1
     target=$(target_for_host "${os}" "${arch}") || return 1
-    latest_url=$(curl --fail --silent --show-error --location --retry 3 --connect-timeout 10 --max-time 60 \
-        --proto '=https' --proto-redir '=https' --output /dev/null --write-out '%{url_effective}' \
-        "${REPOSITORY}/releases/latest") || return 1
-    tag="${latest_url##*/}"
+    version="${STRICTBASH_VERSION:-latest}"
+    if [[ "${version}" == latest ]]; then
+        latest_url=$(curl --fail --silent --show-error --location --retry 3 --connect-timeout 10 --max-time 60 \
+            --proto '=https' --proto-redir '=https' --output /dev/null --write-out '%{url_effective}' \
+            "${REPOSITORY}/releases/latest") || return 1
+        tag="${latest_url##*/}"
+    else
+        tag="v${version#v}"
+    fi
     if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        error "unexpected latest release URL: ${latest_url}" || return 1
+        error 'STRICTBASH_VERSION must be latest or a version such as 0.1.2 or v0.1.2; the resolved release must use that tag format' || return 1
         return 1
     fi
 
@@ -78,7 +83,7 @@ install_release() {
 main() {
     local workdir result
     if [[ "${#}" -ne 0 ]]; then
-        error 'usage: bash install.sh (configure STRICTBASH_INSTALL_DIR or STRICTBASH_BUILD_FROM_SOURCE=1 via environment)' || return 1
+        error 'usage: bash install.sh (configure STRICTBASH_VERSION, STRICTBASH_INSTALL_DIR or STRICTBASH_BUILD_FROM_SOURCE=1 via environment)' || return 1
         return 1
     fi
     workdir=$(mktemp -d "${TMPDIR:-/tmp}/strictbash-install.XXXXXXXX") || return 1

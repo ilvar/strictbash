@@ -23,10 +23,19 @@ latest release tag** with Cargo. Source builds require rustup and a native C
 compiler; the script installs the pinned Rust 1.97.1 toolchain via rustup.
 ShellCheck remains required on PATH for linting.
 
+Set `STRICTBASH_VERSION=0.1.2` (or `v0.1.2`) to install a specific release:
+
+```bash
+STRICTBASH_VERSION=0.1.2 bash /tmp/strictbash-install.sh
+```
+
+Unset, empty, or `latest` selects the latest release. A pinned version skips the
+latest-release lookup and applies to both binary downloads and source builds.
 Set `STRICTBASH_INSTALL_DIR=/your/bin` to change the destination, or
 `STRICTBASH_BUILD_FROM_SOURCE=1` to force a source build. Download/checksum
 failures stop installation and preserve the existing binary; they do not
-silently trigger a source build. A published release must exist first.
+silently trigger a source build. Binary installation requires a published
+release; pinned source builds only require the selected Git tag.
 
 To install from the current development branch instead:
 

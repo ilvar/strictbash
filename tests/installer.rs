@@ -116,6 +116,7 @@ printf '%s\n' "$@" >>"$RUSTUP_LOG"
             .env("HOME", self.root.path())
             .env("STRICTBASH_INSTALL_DIR", &self.destination)
             .env_remove("STRICTBASH_BUILD_FROM_SOURCE")
+            .env_remove("STRICTBASH_VERSION")
             .env("MOCK_OS", os)
             .env("MOCK_ARCH", arch)
             .env("PAYLOAD", self.root.path().join("payload"))
@@ -173,6 +174,88 @@ fn downloads_latest_matching_binary_and_checksum_for_supported_architectures() {
         )));
         assert!(!fixture.cargo_log.exists());
         assert!(!fixture.rustup_log.exists());
+    }
+}
+
+#[test]
+fn pinned_versions_download_the_selected_tag_without_latest_lookup() {
+    for version in ["0.1.2", "v0.1.2"] {
+        let fixture = Fixture::new();
+        fixture.assert_installed(&fixture.run(
+            "Linux",
+            "x86_64",
+            &[("STRICTBASH_VERSION", version), ("FAIL_LATEST", "1")],
+        ));
+        let log = fs::read_to_string(&fixture.curl_log).unwrap();
+        assert!(!log.contains("/releases/latest"));
+        assert!(log.contains("/releases/download/v0.1.2/strictbash-x86_64-unknown-linux-musl\n"));
+        assert!(
+            log.contains("/releases/download/v0.1.2/strictbash-x86_64-unknown-linux-musl.sha256\n")
+        );
+        assert!(!fixture.cargo_log.exists());
+    }
+}
+
+#[test]
+fn pinned_source_builds_use_the_selected_tag_without_any_release_lookup() {
+    for (arch, forced) in [("riscv64", "0"), ("x86_64", "1")] {
+        let fixture = Fixture::new();
+        fixture.assert_installed(&fixture.run(
+            "Linux",
+            arch,
+            &[
+                ("STRICTBASH_VERSION", "v0.1.2"),
+                ("STRICTBASH_BUILD_FROM_SOURCE", forced),
+                ("FAIL_LATEST", "1"),
+            ],
+        ));
+        assert!(fs::read_to_string(&fixture.cargo_log)
+            .unwrap()
+            .contains("--tag\nv0.1.2\n--locked\n"));
+        assert!(!fixture.curl_log.exists());
+    }
+}
+
+#[test]
+fn empty_version_and_explicit_latest_keep_default_behavior() {
+    for version in ["", "latest"] {
+        let fixture = Fixture::new();
+        fixture.assert_installed(&fixture.run(
+            "Linux",
+            "x86_64",
+            &[("STRICTBASH_VERSION", version)],
+        ));
+        let log = fs::read_to_string(&fixture.curl_log).unwrap();
+        assert!(log.contains("/releases/latest"));
+        assert!(log.contains("/releases/download/v9.8.7/"));
+    }
+}
+
+#[test]
+fn invalid_version_is_rejected_before_network_or_build_and_preserves_install() {
+    for version in [
+        "main",
+        "../v0.1.2",
+        "vv0.1.2",
+        "0.1",
+        "0.1.2;touch file",
+        " 0.1.2",
+    ] {
+        let fixture = Fixture::new();
+        fs::write(fixture.destination.join("strictbash"), "existing install").unwrap();
+        let output = fixture.run("Linux", "riscv64", &[("STRICTBASH_VERSION", version)]);
+        assert!(
+            !output.status.success(),
+            "invalid version accepted: {version}"
+        );
+        assert!(String::from_utf8_lossy(&output.stderr).contains("STRICTBASH_VERSION must be"));
+        assert!(!fixture.curl_log.exists());
+        assert!(!fixture.cargo_log.exists());
+        assert!(!fixture.rustup_log.exists());
+        assert_eq!(
+            fs::read_to_string(fixture.destination.join("strictbash")).unwrap(),
+            "existing install"
+        );
     }
 }
 

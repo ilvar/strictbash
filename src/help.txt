@@ -6,7 +6,11 @@ Install:
   Installs the latest release to ~/.local/bin. Linux x64/ARM64 use static MUSL
   binaries with SHA-256 verification. Other Unix hosts/architectures build the
   same release tag; rustup and a native C compiler are required. The script
-  installs Rust 1.97.1 through rustup for source builds. A release must exist.
+  installs Rust 1.97.1 through rustup for source builds.
+  STRICTBASH_VERSION=0.1.2 (or v0.1.2) pins the version for downloads and builds;
+  unset, empty or latest selects the latest release. Pinned versions skip the
+  latest-release lookup. Downloads require a published release; pinned source
+  builds only require the selected Git tag.
   STRICTBASH_INSTALL_DIR changes the destination; STRICTBASH_BUILD_FROM_SOURCE=1
   forces a build. Download/checksum failures never silently switch to a build.
   ShellCheck is required separately on PATH for linting.
