@@ -1,0 +1,39 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: strictbash-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal --component clippy --component rustfmt
+      - name: ShellCheck
+        run: |
+          curl --fail --location --retry 3 https://github.com/koalaman/shellcheck/releases/download/v0.10.0/shellcheck-v0.10.0.linux.x86_64.tar.xz -o /tmp/shellcheck.tar.xz
+          tar -xf /tmp/shellcheck.tar.xz -C /tmp
+          sudo install /tmp/shellcheck-v0.10.0/shellcheck /usr/local/bin/shellcheck
+      - name: Install strictrs
+        run: cargo install --git https://github.com/ilvar/strictrs --rev cf1142b2c73909a3ba2258f32f69a6a72a82cb1c --locked
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets --all-features --locked -- -D warnings
+      - run: cargo test --all-targets --all-features --locked
+      - run: strictrs check .
+      - run: cargo run --locked -- check templates
+      - name: Generated project
+        run: |
+          cargo run --locked -- new smoke-project
+          cargo run --locked -- check smoke-project
+          cd smoke-project
+          bash tests/smoke.sh
+      - run: cargo build --release --locked
+      - uses: actions/upload-artifact@v4
+        with:
+          name: strictbash-linux-x86_64
+          path: target/release/strictbash

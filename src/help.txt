@@ -1,0 +1,95 @@
+strictbash — a constrained Bash profile and diagnostic oracle for coding agents
+
+Install:
+  cargo install --git https://github.com/ilvar/strictbash --locked
+  Install ShellCheck 0.10.0 (recommended) and put shellcheck on PATH.
+
+Commands:
+  strictbash check [PATH]     Check a script or recursively check a project.
+  strictbash [PATH]           Alias for check; defaults to current directory.
+  strictbash new NAME         Create a standalone Bash project; never overwrite.
+  strictbash --help           Print this embedded manual (-h/help also work).
+  strictbash --version        Print the binary version.
+
+Agent workflow: check → repair → re-check. Read every diagnostic; use explicit
+failure handling. Do not invent fixes, disable checks, or push unvalidated code.
+The checker NEVER executes the input scripts. ShellCheck is mandatory, with
+--norc --shell=bash --format=json1 --enable=all --severity=style. SHELLCHECK_OPTS
+is removed from its environment. Inline ShellCheck directives are forbidden.
+External source following is disabled; sourcing is outside this profile.
+
+Output contract (schema v1): one JSON object for successful checks and new.
+Fields: ok, error_count, warning_count, diagnostics. Each diagnostic contains
+level, source (strictbash/shellcheck), code, message, at, fixes. at contains file,
+line, col, end_line, end_col, snippet; positions are 1-based character columns,
+end positions exclusive. Paths are relative to the checked directory, or the
+parent of a checked file, using '/'. Ordering: file, line, col, code, message.
+ALL ShellCheck severities are promoted to errors; warning_count is always zero.
+fixes is empty: this release checks only and never modifies existing scripts.
+Operational/invocation failures print concise stderr and no stdout. Help and
+version are plain-text stdout exceptions. Exit 0: clean; 1: diagnostics;
+2: invocation, discovery, parser-engine or ShellCheck operational failure.
+
+Discovery: .sh/.bash files and extensionless files with Bash shebangs. Explicit
+file paths are checked regardless of extension. Skip .git, target, node_modules,
+vendor, .venv and nested symlinks. Explicit paths are canonicalized. Unreadable
+files/directories fail the operation. No scripts is an operational error.
+
+Strict rules:
+  strictbash::bash_shebang          #!/usr/bin/env bash or /bin/bash or /usr/bin/bash.
+  strictbash::required_options      First executable statement: set -u -o pipefail.
+  strictbash::fixed_options         No other set/shopt; no set -e or option changes.
+  strictbash::explicit_status       Check fallible commands/assignments/pipelines/tests.
+  strictbash::no_dynamic_code       No eval, source, '.', trap, inline shell code or dispatch wrappers.
+  strictbash::no_dynamic_command    Command name must be a literal executable name.
+  strictbash::no_indirection        No ${!name} or nameref (-n) declarations.
+  strictbash::no_backticks          Use $(...) command substitution.
+  strictbash::no_process_substitution  No <(...) or >(...); their exit status is hidden.
+  strictbash::no_background         No asynchronous '&' jobs.
+  strictbash::no_masked_status      One substitution per standalone checked assignment.
+  strictbash::no_star_args          Use "${@}", never $* or ${*}.
+  strictbash::prefer_printf         printf with a literal format instead of echo.
+  strictbash::no_suppression        No inline ShellCheck directives.
+  strictbash::syntax_error          Invalid/unsupported tree-sitter Bash syntax.
+ShellCheck diagnostics use shellcheck::SC<number>.
+
+Status handling:
+  if output=$(tool "${arg}"); then
+      printf '%s\n' "${output}"
+  else
+      printf 'tool failed\n' >&2 || exit 1
+      exit 1
+  fi
+  tool "${arg}" || exit 1
+
+Use if/while/until or an explicit || handler. In &&/|| chains each non-final
+operand consumes a status; the final operand still needs a handler or must be
+one of the exempt builtins. Only the final command of an if/loop condition is
+tested. Groups/functions do not magically guard the commands inside them.
+Pipelines must be guarded as a whole; pipefail exposes upstream failures.
+Command substitutions propagate status only through standalone assignments;
+declaration-with-substitution and substitution inside command arguments mask it.
+Exempt builtins: printf, :, true, false, return, exit, break, continue, prologue
+set. This syntactic policy assumes normal Bash builtins; it is NOT a proof that
+every failure is handled (printf can fail, a handler can be semantically wrong,
+and functions may shadow builtins). Check redirections explicitly too.
+
+Keep Bash as small standalone glue. No source libraries or string traps in this
+initial profile. Move complex work into Rust using strictrs. The parser is
+tree-sitter-bash, not a custom shell parser; ShellCheck adds semantic analysis.
+Literal `bash script.sh` calls are allowed; dynamic script paths, inline-code
+modes and other shell interpreters are forbidden.
+This tool is a linter, not a sandbox or security boundary.
+
+Generated project: main.sh, tests/smoke.sh, Makefile, README.md, AGENTS.md.
+Run Bash scripts with bash main.sh; run make check and make test. Generation
+validates NAME, writes through a staging directory and refuses existing paths.
+No fix command or install-skills command is implemented in v0.1.
+
+Development (Rust 1.97.1, pinned dependencies and committed Cargo.lock):
+  cargo fmt --check
+  cargo clippy --all-targets --all-features --locked -- -D warnings
+  cargo test --all-targets --all-features --locked
+  strictrs check .
+  cargo run --locked -- check templates
+Tests require ShellCheck on PATH. Preserve minimized property-test regressions.
